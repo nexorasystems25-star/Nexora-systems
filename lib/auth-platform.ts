@@ -6,6 +6,7 @@ import {
   organizations,
   subscriptions,
   cfUsers,
+  platformOwners,
   type Identity,
   type Membership,
   type Organization,
@@ -15,7 +16,7 @@ import {
 // NEXORA PLATFORM: 4-Level Auth Hierarchy
 // ============================================================================
 //
-// Level 1: Platform Owner (nexorasystems25@gmail.com)
+// Level 1: Platform Owner (verified via platform_owners table)
 //   - Full platform access across all tenants
 //   - Can manage products, tenants, billing, support
 //   - Can impersonate any user for support
@@ -37,9 +38,6 @@ import {
 //   - Registration, login, password reset
 //   - No authenticated access
 // ============================================================================
-
-// Platform owner email (cannot be changed)
-const PLATFORM_OWNER_EMAIL = "nexorasystems25@gmail.com";
 
 // Auth levels
 export const AuthLevel = {
@@ -295,6 +293,37 @@ export async function resolvePlatformUser(
 }
 
 /**
+ * Tenant-scoped user type for routes that require tenant context.
+ */
+export type TenantUser = PlatformUser & {
+  tenantId: string;
+  role: string;
+};
+
+/**
+ * Resolve a tenant-scoped user from a request.
+ * Returns null if user doesn't have tenant context.
+ */
+export async function resolveTenantUser(
+  request: Request
+): Promise<TenantUser | null> {
+  const user = await resolvePlatformUser(request);
+  if (!user) return null;
+
+  // User must have tenant context
+  if (!user.tenantId) return null;
+
+  // Determine the role for tenant context
+  const role = user.clientRole || user.platformRole || "tenant_viewonly";
+
+  return {
+    ...user,
+    tenantId: user.tenantId,
+    role,
+  };
+}
+
+/**
  * Resolve user from Supabase JWT token.
  */
 async function resolveSupabaseUser(
@@ -425,7 +454,15 @@ async function createIdentityOnFirstLogin(
   email: string
 ): Promise<PlatformUser | null> {
   const db = await getDb();
-  const isOwner = email === PLATFORM_OWNER_EMAIL;
+
+  // Check if email is a verified platform owner
+  const [ownerRecord] = await db
+    .select()
+    .from(platformOwners)
+    .where(eq(platformOwners.email, email.toLowerCase()))
+    .limit(1);
+
+  const isOwner = ownerRecord?.status === "active";
 
   // Create identity
   const [identity] = await db
@@ -471,10 +508,21 @@ async function createIdentityOnFirstLogin(
 
 /**
  * Platform owner fallback for local preview.
+ * Only works if the owner email is in the platform_owners table.
  */
 async function resolvePlatformOwnerFallback(): Promise<PlatformUser | null> {
   const db = await getDb();
-  const email = PLATFORM_OWNER_EMAIL;
+
+  // Find any active platform owner in the database
+  const [ownerRecord] = await db
+    .select()
+    .from(platformOwners)
+    .where(eq(platformOwners.status, "active"))
+    .limit(1);
+
+  if (!ownerRecord) return null;
+
+  const email = ownerRecord.email;
 
   // Get or create identity
   let [identity] = await db

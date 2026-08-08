@@ -283,7 +283,31 @@ export const platformConfig = pgTable("platform_config", {
     .defaultNow(),
 });
 
-// 1.10 Notifications
+// 1.11 Platform Owners (verified owner records)
+export const platformOwners = pgTable(
+  "platform_owners",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    identityId: uuid("identity_id")
+      .notNull()
+      .references(() => identities.id),
+    email: text("email").notNull().unique(),
+    status: text("status").notNull().default("active"),
+    verifiedAt: timestamp("verified_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("platform_owners_email_idx").on(table.email),
+    index("platform_owners_identity_idx").on(table.identityId),
+  ]
+);
+
+// 1.12 Notifications
 export const notifications = pgTable(
   "notifications",
   {

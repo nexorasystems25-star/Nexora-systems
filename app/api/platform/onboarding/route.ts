@@ -5,7 +5,10 @@ import {
   products,
   memberships,
   subscriptions,
+  auditEvents,
+  tenantDomains,
 } from "../../../../db/schema-platform";
+import { PRODUCT_DOMAINS } from "../../../../packages/config/src/domains";
 import { resolvePlatformUser, type PlatformUser } from "../../../../lib/auth-platform";
 import { apiJson, getRequestId, readJson, ApiError } from "../../_security";
 
@@ -102,6 +105,19 @@ export async function POST(request: Request) {
       })
       .returning();
 
+    // Create tenant domain
+    const productSlug = "churchflow";
+    const baseDomain = PRODUCT_DOMAINS[productSlug];
+    if (baseDomain) {
+      const domain = `${slug}.${baseDomain}`;
+      await db.insert(tenantDomains).values({
+        organizationId: org.id,
+        domain,
+        productSlug,
+        isPrimary: true,
+      });
+    }
+
     // Create subscription (trial)
     const [sub] = await db
       .insert(subscriptions)
@@ -142,10 +158,19 @@ export async function POST(request: Request) {
     }
 
     // Audit log
-    await db.execute(`
-      INSERT INTO audit_events (organization_id, actor_id, actor_email, action, entity_type, entity_id, payload)
-      VALUES ('${org.id}', ${user ? `'${user.identityId}'` : 'NULL'}, '${user?.email || "system"}', 'tenant.onboard', 'organization', '${org.id}', '{"name": "${payload.organizationName.replace(/"/g, '\\"')}", "slug": "${slug}", "plan": "${payload.plan || "professional"}"}')
-    `);
+    await db.insert(auditEvents).values({
+      organizationId: org.id,
+      actorId: user?.identityId || null,
+      actorEmail: user?.email || "system",
+      action: "tenant.onboard",
+      entityType: "organization",
+      entityId: org.id,
+      payload: {
+        name: payload.organizationName,
+        slug,
+        plan: payload.plan || "professional",
+      },
+    });
 
     return apiJson(
       {

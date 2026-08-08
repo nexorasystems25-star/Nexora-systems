@@ -34,6 +34,7 @@ export const users = sqliteTable("users", {
   campus: text("campus").notNull().default("Grace Centre"),
   status: text("status").notNull().default("Active"),
   memberId: integer("member_id").references(() => members.id, { onDelete: "set null" }),
+  mfaEnabled: integer("mfa_enabled", { mode: "boolean" }).notNull().default(false),
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
   lastActiveAt: text("last_active_at"),
 });

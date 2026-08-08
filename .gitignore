@@ -36,8 +36,6 @@ yarn-error.log*
 next-env.d.ts
 /dist/
 /.wrangler/
-/.sites-runtime/
-/.turbo/
 /.vinext/
 /.openai/
 /outputs/
@@ -48,6 +46,8 @@ next-env.d.ts
 .next/
 .turbo/
 sites-runtime/
+**/.sites-runtime/
+**/.turbo/
 
 # env files
 .env*

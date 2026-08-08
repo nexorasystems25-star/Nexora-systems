@@ -267,7 +267,6 @@ export const tenantDomains = pgTable(
       .defaultNow(),
   },
   (table) => [
-    uniqueIndex("tenant_domains_domain_idx").on(table.domain),
     index("tenant_domains_org_idx").on(table.organizationId),
     index("tenant_domains_product_idx").on(table.productSlug),
   ]

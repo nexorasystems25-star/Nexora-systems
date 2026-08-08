@@ -18,6 +18,5 @@ CREATE TABLE IF NOT EXISTS public.tenant_domains (
 );
 
 -- Indexes for tenant_domains
-CREATE UNIQUE INDEX IF NOT EXISTS tenant_domains_domain_idx ON public.tenant_domains(domain);
 CREATE INDEX IF NOT EXISTS tenant_domains_org_idx ON public.tenant_domains(organization_id);
 CREATE INDEX IF NOT EXISTS tenant_domains_product_idx ON public.tenant_domains(product_slug);

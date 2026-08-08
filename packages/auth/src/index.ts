@@ -6,6 +6,6 @@ export {
   extractSlugFromHostname,
 } from "./tenant";
 export { signToken, verifyToken } from "./jwt";
-export type { TenantContext } from "./tenant";
+export type { DomainTenantContext } from "./tenant";
 export type { AuthUser, AuthConfig } from "./types";
 export type { LegacyTenantContext } from "./tenant";

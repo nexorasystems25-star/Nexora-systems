@@ -1,13 +1,12 @@
 import { eq } from "drizzle-orm";
-import { db } from "../../db";
-import { organizations, tenantDomains } from "../../db/schema-platform";
+import { db, organizations, tenantDomains } from "../../db/src";
 import { PRODUCT_DOMAINS } from "../../config/src/domains";
 
 // ============================================================================
 // NEW: Tenant Resolution Helpers (Domain-based routing)
 // ============================================================================
 
-export interface TenantContext {
+export interface DomainTenantContext {
   organizationId: string;
   slug: string;
   name: string;
@@ -20,7 +19,7 @@ export interface TenantContext {
  */
 export async function resolveTenantFromDomain(
   domain: string
-): Promise<TenantContext | null> {
+): Promise<DomainTenantContext | null> {
   const host = domain.split(":")[0].toLowerCase();
 
   // 1. Exact domain match in tenant_domains table
@@ -65,7 +64,9 @@ export async function resolveTenantFromDomain(
 export async function resolveTenantFromSlug(
   slug: string,
   productSlug: string
-): Promise<TenantContext | null> {
+): Promise<DomainTenantContext | null> {
+  if (!slug || !slug.trim() || !productSlug) return null;
+
   const [org] = await db
     .select()
     .from(organizations)

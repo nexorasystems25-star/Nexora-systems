@@ -247,7 +247,33 @@ export const auditEvents = pgTable(
   ]
 );
 
-// 1.9 Platform Configuration
+// 1.9 Tenant Domains (domain-to-tenant mapping)
+export const tenantDomains = pgTable(
+  "tenant_domains",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    domain: varchar("domain", { length: 255 }).notNull().unique(),
+    productSlug: varchar("product_slug", { length: 50 }).notNull(),
+    isPrimary: boolean("is_primary").notNull().default(false),
+    verifiedAt: timestamp("verified_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("tenant_domains_domain_idx").on(table.domain),
+    index("tenant_domains_org_idx").on(table.organizationId),
+    index("tenant_domains_product_idx").on(table.productSlug),
+  ]
+);
+
+// 1.10 Platform Configuration
 export const platformConfig = pgTable("platform_config", {
   key: text("key").primaryKey(),
   value: jsonb("value").notNull(),

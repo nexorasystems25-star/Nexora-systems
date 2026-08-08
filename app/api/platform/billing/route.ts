@@ -5,6 +5,7 @@ import {
   invoices,
   organizations,
   products,
+  auditEvents,
 } from "../../../db/schema-platform";
 import {
   resolveTenantUser,
@@ -233,14 +234,19 @@ export async function POST(request: Request) {
     }
 
     // Audit log
-    await db.execute(`
-      INSERT INTO audit_events (organization_id, actor_id, actor_email, action, entity_type, entity_id, payload)
-      VALUES ('${user.tenantId}', '${user.identityId}', '${user.email}', 'billing.${payload.action}', 'subscription', '${currentSub.id}', '${JSON.stringify({
+    await db.insert(auditEvents).values({
+      organizationId: user.tenantId,
+      actorId: user.identityId,
+      actorEmail: user.email,
+      action: `billing.${payload.action}`,
+      entityType: "subscription",
+      entityId: currentSub.id,
+      payload: {
         action: payload.action,
         plan: payload.plan || currentSub.plan,
         previousPlan: currentSub.plan,
-      }).replace(/'/g, "''")}')
-    `);
+      },
+    });
 
     return apiJson(
       {

@@ -4,8 +4,6 @@ import { mobileDevices, users } from "../../db/schema";
 import { hasPermission, type RoleKey, rolePolicies } from "../../lib/access";
 import { apiJson, getRequestId } from "./_security";
 
-const OWNER_EMAIL = "amanvid.da@gmail.com";
-
 export type AccessUser = {
   id: number;
   name: string;
@@ -59,23 +57,10 @@ export async function getAccessUser(request: Request): Promise<AccessUser | null
     supabaseEmail = identity.email?.trim().toLowerCase() || "";
   }
   const email = supabaseEmail || request.headers.get("oai-authenticated-user-email")?.trim().toLowerCase();
-  const isLocalPreview = new URL(request.url).hostname === "terminal.local";
-  const resolvedEmail = email || (isLocalPreview ? OWNER_EMAIL : "");
-  if (!resolvedEmail) return null;
+  if (!email) return null;
 
   const db = await getDb();
-  let [row] = await db.select().from(users).where(eq(users.email, resolvedEmail)).limit(1);
-  if (!row && resolvedEmail === OWNER_EMAIL) {
-    await db.insert(users).values({
-      name: readName(request, resolvedEmail),
-      email: resolvedEmail,
-      role: "super_admin",
-      campus: "Grace Centre",
-      status: "Active",
-      lastActiveAt: new Date().toISOString(),
-    }).onConflictDoNothing();
-    [row] = await db.select().from(users).where(eq(users.email, resolvedEmail)).limit(1);
-  }
+  const [row] = await db.select().from(users).where(eq(users.email, email)).limit(1);
   if (!row || row.status !== "Active" || !(row.role in rolePolicies)) return null;
 
   const role = row.role as RoleKey;

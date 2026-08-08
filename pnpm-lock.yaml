@@ -355,6 +355,9 @@ importers:
       '@stripe/stripe-js':
         specifier: ^4.0.0
         version: 4.10.0
+      '@supabase/supabase-js':
+        specifier: ^2.112.1
+        version: 2.112.1
       stripe:
         specifier: ^16.0.0
         version: 16.12.0

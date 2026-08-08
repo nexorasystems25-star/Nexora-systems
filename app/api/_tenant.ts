@@ -9,6 +9,7 @@ import {
   type PlatformUser,
   Permissions,
 } from "../../lib/auth-platform";
+import { auditEvents } from "../../db/schema-platform";
 import { apiJson, getRequestId, type ApiError } from "./_security";
 
 // ============================================================================
@@ -201,11 +202,15 @@ export async function writeTenantAudit(
 ): Promise<void> {
   try {
     const db = await getDb();
-    // Use the cf_audit_logs table for tenant-scoped audits
-    await db.execute(`
-      INSERT INTO cf_audit_logs (tenant_id, actor_email, actor_name, action, entity_type, entity_id, detail)
-      VALUES ('${tenantId}', '${user.email}', '${user.fullName}', '${action}', '${entityType}', '${entityId}', ${detail ? `'${detail.replace(/'/g, "''")}'` : 'NULL'})
-    `);
+    await db.insert(auditEvents).values({
+      organizationId: tenantId,
+      actorId: user.identityId,
+      actorEmail: user.email,
+      action,
+      entityType,
+      entityId,
+      payload: detail ? { detail } : {},
+    });
   } catch (error) {
     console.error("Audit write failed:", error);
   }

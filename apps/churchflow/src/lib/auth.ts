@@ -21,7 +21,15 @@ export interface AuthUser {
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const jwtSecret = new TextEncoder().encode(process.env.JWT_SECRET || "your-secret-key");
+
+const JWT_SECRET_RAW = process.env.JWT_SECRET;
+if (!JWT_SECRET_RAW) {
+  throw new Error(
+    "JWT_SECRET environment variable is required. " +
+    "Set it in your .env.local file or environment before starting the server."
+  );
+}
+const jwtSecret = new TextEncoder().encode(JWT_SECRET_RAW);
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 

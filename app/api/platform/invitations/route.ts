@@ -4,6 +4,7 @@ import {
   memberships,
   identities,
   organizations,
+  auditEvents,
 } from "../../../db/schema-platform";
 import {
   resolveTenantUser,
@@ -119,14 +120,19 @@ export async function POST(request: Request) {
     });
 
     // Audit log
-    await db.execute(`
-      INSERT INTO audit_events (organization_id, actor_id, actor_email, action, entity_type, entity_id, payload)
-      VALUES ('${user.tenantId}', '${user.identityId}', '${user.email}', 'member.invite', 'membership', '${invitation.id}', '${JSON.stringify({
+    await db.insert(auditEvents).values({
+      organizationId: user.tenantId,
+      actorId: user.identityId,
+      actorEmail: user.email,
+      action: "member.invite",
+      entityType: "membership",
+      entityId: invitation.id,
+      payload: {
         email: payload.email,
         role: targetRole,
         invitedBy: user.email,
-      }).replace(/'/g, "''")}')
-    `);
+      },
+    });
 
     return apiJson(
       {

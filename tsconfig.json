@@ -27,6 +27,5 @@
       "@nexora/utils": ["./packages/utils/src"]
     }
   },
-  "exclude": ["node_modules"],
-  "extends": "turbo/tsconfig/base.json"
+  "exclude": ["node_modules"]
 }

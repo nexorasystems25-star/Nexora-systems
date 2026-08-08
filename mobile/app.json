@@ -1,0 +1,38 @@
+{
+  "expo": {
+    "name": "ChurchFlow",
+    "slug": "churchflow-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "churchflow",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.amanvid.churchflow"
+    },
+    "android": {
+      "package": "com.amanvid.churchflow",
+      "adaptiveIcon": {
+        "backgroundColor": "#123A43"
+      }
+    },
+    "plugins": [
+      [
+        "expo-secure-store",
+        {
+          "configureAndroidBackup": true,
+          "faceIDPermission": "Allow ChurchFlow to protect authorised ministry access."
+        }
+      ]
+    ],
+    "extra": {
+      "apiUrl": "https://churchflow-management.amanvid-da.chatgpt.site",
+      "supabaseUrl": "https://waffstaubvlenwzkqvmf.supabase.co",
+      "supabaseAnonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndhZmZzdGF1YnZsZW53emtxdm1mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU0MTk1MjEsImV4cCI6MjEwMDk5NTUyMX0.nAysfMoQFC4TRMS7BfkwzFDzdqIhLBD4sNCbvxJD-r4",
+      "eas": {
+        "projectId": "9ac5d392-8266-4be4-a0c6-639a1a5ef3e5"
+      }
+    }
+  }
+}

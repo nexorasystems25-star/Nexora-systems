@@ -1,0 +1,90 @@
+@import "tailwindcss";
+
+@theme {
+  --color-green-50: #f0faf4;
+  --color-green-100: #d1f2df;
+  --color-green-200: #a6e5c2;
+  --color-green-300: #6dd49e;
+  --color-green-400: #3bbf7a;
+  --color-green-500: #1fa562;
+  --color-green-600: #14854e;
+  --color-green-700: #116a40;
+  --color-green-800: #0f5434;
+  --color-green-900: #0d452c;
+  --color-green-950: #06271a;
+
+  --color-slate-50: #f8fafc;
+  --color-slate-100: #f1f5f9;
+  --color-slate-200: #e2e8f0;
+  --color-slate-300: #cbd5e1;
+  --color-slate-400: #94a3b8;
+  --color-slate-500: #64748b;
+  --color-slate-600: #475569;
+  --color-slate-700: #334155;
+  --color-slate-800: #1e293b;
+  --color-slate-900: #0f172a;
+  --color-slate-950: #020617;
+
+  --color-amber-400: #facc15;
+  --color-amber-500: #eab308;
+
+  --font-display: "Outfit", system-ui, sans-serif;
+  --font-body: "Outfit", system-ui, sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: var(--font-body);
+  color: var(--color-slate-900);
+  background-color: var(--color-slate-50);
+  line-height: 1.6;
+}
+
+@media (prefers-color-scheme: dark) {
+  body {
+    color: var(--color-slate-100);
+    background-color: var(--color-slate-950);
+  }
+}
+
+::selection {
+  background-color: var(--color-green-200);
+  color: var(--color-green-900);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-green-500);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+.gradient-text {
+  background: linear-gradient(135deg, var(--color-green-600), var(--color-green-400));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+@media (prefers-color-scheme: dark) {
+  .gradient-text {
+    background: linear-gradient(135deg, var(--color-green-300), var(--color-green-200));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+}

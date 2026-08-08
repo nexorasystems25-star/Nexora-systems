@@ -48,6 +48,7 @@ next-env.d.ts
 sites-runtime/
 **/.sites-runtime/
 **/.turbo/
+turbo/
 
 # env files
 .env*

@@ -1,11 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { jwtVerify } from "jose";
-import {
-  resolveTenantFromDomain,
-  resolveTenantFromSlug,
-  extractSlugFromHostname,
-} from "@nexora/auth";
+import { resolveTenantFromDomain, extractSlugFromHostname } from "@nexora/auth";
 
 const publicPaths = ["/login", "/register", "/forgot-password", "/api/auth"];
 const ownerPaths = ["/owner"];
@@ -29,10 +25,12 @@ export async function middleware(request: NextRequest) {
 
   let tenantContext = null;
   if (fastPath) {
-    tenantContext = await resolveTenantFromSlug(
-      fastPath.slug,
-      fastPath.productSlug
-    );
+    tenantContext = {
+      organizationId: "", // Will be resolved by downstream handlers if needed
+      slug: fastPath.slug,
+      name: "", // Will be resolved by downstream handlers if needed
+      productSlug: fastPath.productSlug,
+    };
   } else {
     tenantContext = await resolveTenantFromDomain(hostname);
   }

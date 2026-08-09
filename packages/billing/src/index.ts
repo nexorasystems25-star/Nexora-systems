@@ -17,3 +17,11 @@ export {
   transitionSubscription,
 } from "./subscription-lifecycle";
 export type { SubscriptionStatus } from "./subscription-lifecycle";
+export {
+  initiateOffboarding,
+  exportOrganizationData,
+  settleFinancials,
+  retainData,
+  deleteOrganizationData,
+} from "./offboarding";
+export type { OffboardingStep, OffboardingProgress } from "./offboarding";

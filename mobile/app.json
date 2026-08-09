@@ -29,7 +29,7 @@
     "extra": {
       "apiUrl": "https://churchflow-management.amanvid-da.chatgpt.site",
       "supabaseUrl": "https://waffstaubvlenwzkqvmf.supabase.co",
-      "supabaseAnonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndhZmZzdGF1YnZsZW53emtxdm1mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU0MTk1MjEsImV4cCI6MjEwMDk5NTUyMX0.nAysfMoQFC4TRMS7BfkwzFDzdqIhLBD4sNCbvxJD-r4",
+      "supabaseAnonKey": "process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY",
       "eas": {
         "projectId": "9ac5d392-8266-4be4-a0c6-639a1a5ef3e5"
       }

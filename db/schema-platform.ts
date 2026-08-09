@@ -78,6 +78,11 @@ export const products = pgTable(
     status: text("status").notNull().default("planned"),
     description: text("description"),
     config: jsonb("config").default({}),
+    owner: varchar("owner", { length: 50 }).default("cpo-001"),
+    repository: varchar("repository", { length: 255 }),
+    pricing: jsonb("pricing").default({}),
+    dependencies: jsonb("dependencies").default([]),
+    deployment: jsonb("deployment").default({}),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

@@ -25,3 +25,10 @@ export {
   deleteOrganizationData,
 } from "./offboarding";
 export type { OffboardingStep, OffboardingProgress } from "./offboarding";
+export {
+  requestApproval,
+  approveRequest,
+  rejectRequest,
+  getPendingApprovals,
+} from "./approvals";
+export type { ApprovalType, ApprovalStatus, ApprovalRequest } from "./approvals";

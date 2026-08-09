@@ -1,0 +1,43 @@
+module.exports = {
+  expo: {
+    name: "ChurchFlow",
+    slug: "churchflow-mobile",
+    version: "1.0.0",
+    orientation: "portrait",
+    scheme: "churchflow",
+    userInterfaceStyle: "light",
+    newArchEnabled: true,
+    ios: {
+      supportsTablet: true,
+      bundleIdentifier: "com.amanvid.churchflow",
+    },
+    android: {
+      package: "com.amanvid.churchflow",
+      adaptiveIcon: {
+        backgroundColor: "#123A43",
+      },
+    },
+    plugins: [
+      [
+        "expo-secure-store",
+        {
+          configureAndroidBackup: true,
+          faceIDPermission:
+            "Allow ChurchFlow to protect authorised ministry access.",
+        },
+      ],
+    ],
+    extra: {
+      apiUrl:
+        process.env.EXPO_PUBLIC_API_URL ||
+        "https://churchflow-management.amanvid-da.chatgpt.site",
+      supabaseUrl:
+        process.env.EXPO_PUBLIC_SUPABASE_URL ||
+        "https://waffstaubvlenwzkqvmf.supabase.co",
+      supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
+      eas: {
+        projectId: "9ac5d392-8266-4be4-a0c6-639a1a5ef3e5",
+      },
+    },
+  },
+};

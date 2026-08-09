@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { jwtVerify } from "jose";
-import { resolveTenantFromDomain, extractSlugFromHostname, isMFAEnabled, verifyMFACode } from "@nexora/auth";
+import { resolveTenantFromDomain, extractSlugFromHostname, resolveTenantFromSlug, isMFAEnabled, verifyMFACode } from "@nexora/auth";
 
 const publicPaths = ["/login", "/register", "/forgot-password", "/api/auth"];
 const ownerPaths = ["/owner"];
@@ -35,6 +35,14 @@ export async function middleware(request: NextRequest) {
     tenantContext = await resolveTenantFromDomain(hostname);
   }
 
+  // Path-based tenant resolution for /church/[slug]
+  const churchMatch = pathname.match(/^\/church\/([^\/]+)/);
+  const isBaseChurchPage = /^\/church\/[^\/]+$/.test(pathname);
+  if (churchMatch && !tenantContext) {
+    const slug = churchMatch[1];
+    tenantContext = await resolveTenantFromSlug(slug, "churchflow");
+  }
+
   const headers = new Headers(request.headers);
   if (tenantContext) {
     headers.set("x-tenant-id", tenantContext.organizationId);
@@ -45,6 +53,10 @@ export async function middleware(request: NextRequest) {
   const token = request.cookies.get("auth-token")?.value;
 
   if (!token) {
+    // Allow unauthenticated access to base church pages
+    if (isBaseChurchPage) {
+      return NextResponse.next({ request: { headers } });
+    }
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("redirect", pathname);
     const response = NextResponse.redirect(loginUrl);

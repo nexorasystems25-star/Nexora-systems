@@ -9,3 +9,11 @@ export {
   requireEntitlement,
 } from "./entitlements";
 export type { PlanEntitlements, ResourceType, EntitlementCheck } from "./entitlements";
+export {
+  VALID_TRANSITIONS,
+  canTransition,
+  isActive,
+  isSuspended,
+  transitionSubscription,
+} from "./subscription-lifecycle";
+export type { SubscriptionStatus } from "./subscription-lifecycle";

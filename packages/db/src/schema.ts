@@ -14,6 +14,7 @@ import {
   index,
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 
 // ============================================================================
 // PLATFORM TABLES (Shared across all products)
@@ -49,6 +50,21 @@ export const organizations = pgTable("organizations", {
   slugProductIdx: uniqueIndex("organizations_slug_product_idx").on(table.slug, table.productId),
 }));
 
+// Branches / Campuses (multi-site within a tenant)
+export const branches = pgTable("branches", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  organizationId: uuid("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  slug: text("slug").notNull(),
+  address: text("address"),
+  timezone: text("timezone"),
+  isPrimary: boolean("is_primary").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  orgSlugIdx: uniqueIndex("branches_org_slug_idx").on(table.organizationId, table.slug),
+  orgIdx: index("branches_org_idx").on(table.organizationId),
+}));
+
 // Identities (Users)
 export const identities = pgTable("identities", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -61,18 +77,26 @@ export const identities = pgTable("identities", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Memberships (User-Tenant relationship)
+// Memberships (User-Tenant relationship). branchId scopes a role to a single
+// branch (NULL = org-wide). One org-wide membership + one per branch per identity.
 export const memberships = pgTable("memberships", {
   id: uuid("id").primaryKey().defaultRandom(),
   identityId: uuid("identity_id").references(() => identities.id),
   organizationId: uuid("organization_id").references(() => organizations.id),
+  branchId: uuid("branch_id").references(() => branches.id, { onDelete: "set null" }),
   role: text("role").notNull(),
   status: text("status").default("active"),
   invitedBy: uuid("invited_by").references(() => identities.id),
   invitedAt: timestamp("invited_at"),
   joinedAt: timestamp("joined_at").defaultNow(),
 }, (table) => ({
-  identityOrgIdx: uniqueIndex("memberships_identity_org_idx").on(table.identityId, table.organizationId),
+  identityOrgIdx: uniqueIndex("memberships_identity_org_idx")
+    .on(table.identityId, table.organizationId)
+    .where(sql`branch_id IS NULL`),
+  identityOrgBranchIdx: uniqueIndex("memberships_identity_org_branch_idx")
+    .on(table.identityId, table.organizationId, table.branchId)
+    .where(sql`branch_id IS NOT NULL`),
+  branchIdx: index("memberships_branch_idx").on(table.branchId),
 }));
 
 // Subscriptions
@@ -208,6 +232,7 @@ export const impersonationSessions = pgTable("impersonation_sessions", {
 export const invitations = pgTable("invitations", {
   id: uuid("id").primaryKey().defaultRandom(),
   organizationId: uuid("organization_id").references(() => organizations.id),
+  branchId: uuid("branch_id").references(() => branches.id, { onDelete: "set null" }),
   email: text("email").notNull(),
   role: text("role").notNull(),
   invitedBy: uuid("invited_by").references(() => identities.id),
@@ -236,6 +261,7 @@ export const tenantDomains = pgTable("tenant_domains", {
 export const cfMembers = pgTable("cf_members", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   tenantId: uuid("tenant_id").references(() => organizations.id),
+  branchId: uuid("branch_id").references(() => branches.id, { onDelete: "set null" }),
   churchId: text("church_id").notNull(),
   name: text("name").notNull(),
   initials: text("initials"),
@@ -252,12 +278,14 @@ export const cfMembers = pgTable("cf_members", {
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => ({
   tenantIdx: index("cf_members_tenant_idx").on(table.tenantId),
+  branchIdx: index("cf_members_branch_idx").on(table.branchId),
 }));
 
 // ChurchFlow Events
 export const cfEvents = pgTable("cf_events", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   tenantId: uuid("tenant_id").references(() => organizations.id),
+  branchId: uuid("branch_id").references(() => branches.id, { onDelete: "set null" }),
   eventCode: text("event_code").notNull(),
   title: text("title").notNull(),
   eventType: text("event_type"),
@@ -271,12 +299,14 @@ export const cfEvents = pgTable("cf_events", {
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => ({
   tenantIdx: index("cf_events_tenant_idx").on(table.tenantId),
+  branchIdx: index("cf_events_branch_idx").on(table.branchId),
 }));
 
 // ChurchFlow Finance Funds
 export const cfFinanceFunds = pgTable("cf_finance_funds", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   tenantId: uuid("tenant_id").references(() => organizations.id),
+  branchId: uuid("branch_id").references(() => branches.id, { onDelete: "set null" }),
   name: text("name").notNull(),
   code: text("code").notNull(),
   purpose: text("purpose"),
@@ -284,12 +314,14 @@ export const cfFinanceFunds = pgTable("cf_finance_funds", {
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => ({
   tenantIdx: index("cf_finance_funds_tenant_idx").on(table.tenantId),
+  branchIdx: index("cf_finance_funds_branch_idx").on(table.branchId),
 }));
 
 // ChurchFlow Finance Transactions
 export const cfFinanceTransactions = pgTable("cf_finance_transactions", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   tenantId: uuid("tenant_id").references(() => organizations.id),
+  branchId: uuid("branch_id").references(() => branches.id, { onDelete: "set null" }),
   reference: text("reference").notNull(),
   type: text("type").notNull(),
   category: text("category"),
@@ -315,6 +347,7 @@ export const cfFinanceTransactions = pgTable("cf_finance_transactions", {
   immutableAt: timestamp("immutable_at"),
 }, (table) => ({
   tenantIdx: index("cf_finance_transactions_tenant_idx").on(table.tenantId),
+  branchIdx: index("cf_finance_transactions_branch_idx").on(table.branchId),
 }));
 
 // ============================================================================
@@ -484,6 +517,8 @@ export type NewAicosPendingChange = typeof aicosPendingChanges.$inferInsert;
 
 export type Product = typeof products.$inferSelect;
 export type Organization = typeof organizations.$inferSelect;
+export type Branch = typeof branches.$inferSelect;
+export type NewBranch = typeof branches.$inferInsert;
 export type Identity = typeof identities.$inferSelect;
 export type Membership = typeof memberships.$inferSelect;
 export type Subscription = typeof subscriptions.$inferSelect;

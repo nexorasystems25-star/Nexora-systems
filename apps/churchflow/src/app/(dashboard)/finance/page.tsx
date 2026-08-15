@@ -1,76 +1,163 @@
+"use client";
+import { useState, useEffect } from "react";
+
+interface Transaction {
+  id: string;
+  type: string;
+  category: string;
+  amount: number;
+  description: string;
+  member_name: string;
+  payment_method: string;
+  created_at: string;
+}
+
+interface FinanceSummary {
+  total_income: number;
+  total_expenses: number;
+  net_balance: number;
+}
+
+interface FinanceResponse {
+  transactions: Transaction[];
+  funds: unknown[];
+  summary: FinanceSummary;
+  pagination: { page: number; limit: number; total: number; pages: number };
+}
+
 export default function FinancePage() {
-  const transactions = [
-    { id: "1", type: "Income", category: "Tithes", amount: 2500, member: "John Doe", date: "2026-08-05", method: "Mobile Money" },
-    { id: "2", type: "Income", category: "Offerings", amount: 850, member: "Sunday Service", date: "2026-08-04", method: "Cash" },
-    { id: "3", type: "Expense", category: "Utilities", amount: 420, member: "Electric Bill", date: "2026-08-03", method: "Bank Transfer" },
-    { id: "4", type: "Income", category: "Tithes", amount: 500, member: "Jane Smith", date: "2026-08-02", method: "Bank Transfer" },
-    { id: "5", type: "Expense", category: "Maintenance", amount: 1200, member: "Roof Repair", date: "2026-08-01", method: "Cash" },
-  ];
+  const [data, setData] = useState<FinanceResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const res = await fetch("/api/finance?limit=20");
+        if (!res.ok) throw new Error("Failed to fetch finance data");
+        const json = await res.json();
+        setData(json);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "An error occurred");
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchData();
+  }, []);
+
+  const summary = data?.summary;
+  const transactions = data?.transactions || [];
+
+  const formatCurrency = (amount: number) => `GHS ${amount.toLocaleString()}`;
+  const formatDate = (dateStr: string) => {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  };
+
+  if (loading) {
+    return (
+      <div>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "var(--space-xl)" }}>
+          <div>
+            <h1 style={{ marginBottom: "var(--space-xs)" }}>Finance</h1>
+            <p style={{ color: "var(--muted)", fontSize: "var(--text-lg)" }}>Loading...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "var(--space-xl)" }}>
+          <div>
+            <h1 style={{ marginBottom: "var(--space-xs)" }}>Finance</h1>
+          </div>
+        </div>
+        <div className="card card-padding" style={{ color: "var(--error)" }}>{error}</div>
+      </div>
+    );
+  }
 
   return (
     <div>
-      <div className="sm:flex sm:items-center sm:justify-between">
+      {/* Page heading */}
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "var(--space-xl)" }}>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Finance</h1>
-          <p className="mt-2 text-sm text-gray-700">
+          <h1 style={{ marginBottom: "var(--space-xs)" }}>Finance</h1>
+          <p style={{ color: "var(--muted)", fontSize: "var(--text-lg)" }}>
             Record tithes, offerings, and expenses. Generate reports and manage budgets.
           </p>
         </div>
-        <div className="mt-4 sm:mt-0 flex gap-3">
-          <button className="inline-flex items-center justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
-            Export Report
-          </button>
-          <button className="inline-flex items-center justify-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500">
-            + Record Transaction
-          </button>
+        <div style={{ display: "flex", gap: "var(--space-sm)" }}>
+          <button className="btn btn-secondary">Export Report</button>
+          <button className="btn btn-primary">+ Record Transaction</button>
         </div>
       </div>
 
-      <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-3">
-        <div className="overflow-hidden rounded-lg bg-white px-4 py-5 shadow sm:p-6">
-          <dt className="truncate text-sm font-medium text-gray-500">Total Income (This Month)</dt>
-          <dd className="mt-1 text-3xl font-semibold tracking-tight text-green-600">GHS 12,450</dd>
+      {/* KPI Cards */}
+      <div className="kpi-grid" style={{ marginBottom: "var(--space-xl)" }}>
+        <div className="card">
+          <p style={{ fontSize: "var(--text-sm)", color: "var(--muted)" }}>Total Income</p>
+          <p style={{ fontSize: "var(--text-4xl)", fontWeight: 700, color: "var(--success)", marginTop: "var(--space-xs)" }}>
+            {formatCurrency(summary?.total_income ?? 0)}
+          </p>
         </div>
-        <div className="overflow-hidden rounded-lg bg-white px-4 py-5 shadow sm:p-6">
-          <dt className="truncate text-sm font-medium text-gray-500">Total Expenses (This Month)</dt>
-          <dd className="mt-1 text-3xl font-semibold tracking-tight text-red-600">GHS 3,200</dd>
+        <div className="card">
+          <p style={{ fontSize: "var(--text-sm)", color: "var(--muted)" }}>Total Expenses</p>
+          <p style={{ fontSize: "var(--text-4xl)", fontWeight: 700, color: "var(--error)", marginTop: "var(--space-xs)" }}>
+            {formatCurrency(summary?.total_expenses ?? 0)}
+          </p>
         </div>
-        <div className="overflow-hidden rounded-lg bg-white px-4 py-5 shadow sm:p-6">
-          <dt className="truncate text-sm font-medium text-gray-500">Net Balance</dt>
-          <dd className="mt-1 text-3xl font-semibold tracking-tight text-gray-900">GHS 9,250</dd>
+        <div className="card">
+          <p style={{ fontSize: "var(--text-sm)", color: "var(--muted)" }}>Net Balance</p>
+          <p style={{ fontSize: "var(--text-4xl)", fontWeight: 700, marginTop: "var(--space-xs)" }}>
+            {formatCurrency(summary?.net_balance ?? 0)}
+          </p>
         </div>
       </div>
 
-      <div className="mt-8 overflow-hidden rounded-lg bg-white shadow">
-        <div className="px-4 py-5 sm:p-6">
-          <h3 className="text-lg font-medium text-gray-900">Recent Transactions</h3>
-        </div>
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+      {/* Transactions Table */}
+      <div className="section-header">
+        <h2 className="section-title">Recent Transactions</h2>
+      </div>
+      <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+        <table className="table">
+          <thead>
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Method</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+              <th>Date</th>
+              <th>Category</th>
+              <th>Description</th>
+              <th>Method</th>
+              <th style={{ textAlign: "right" }}>Amount</th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {transactions.map((tx) => (
-              <tr key={tx.id}>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{tx.date}</td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${tx.type === "Income" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
-                    {tx.category}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{tx.member}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{tx.method}</td>
-                <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium text-right ${tx.type === "Income" ? "text-green-600" : "text-red-600"}`}>
-                  {tx.type === "Income" ? "+" : "-"}GHS {tx.amount.toLocaleString()}
+          <tbody>
+            {transactions.length === 0 ? (
+              <tr>
+                <td colSpan={5} style={{ textAlign: "center", color: "var(--muted)", padding: "var(--space-xl)" }}>
+                  No transactions found
                 </td>
               </tr>
-            ))}
+            ) : (
+              transactions.map((tx) => (
+                <tr key={tx.id} className="table-row">
+                  <td style={{ fontSize: "var(--text-base)" }}>{formatDate(tx.created_at)}</td>
+                  <td>
+                    <span className={`badge ${tx.type === "income" ? "badge-success" : "badge-error"}`}>
+                      {tx.category}
+                    </span>
+                  </td>
+                  <td style={{ fontSize: "var(--text-base)" }}>{tx.description || tx.member_name || "—"}</td>
+                  <td style={{ fontSize: "var(--text-base)", color: "var(--muted)" }}>{tx.payment_method || "—"}</td>
+                  <td style={{ textAlign: "right", fontSize: "var(--text-base)", fontWeight: 600, color: tx.type === "income" ? "var(--success)" : "var(--error)" }}>
+                    {tx.type === "income" ? "+" : "-"}{formatCurrency(tx.amount)}
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>

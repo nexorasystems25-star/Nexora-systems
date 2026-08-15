@@ -1,27 +1,16 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { getTenantFromRequest } from "@/lib/tenant";
+import {
+  requestBranchContext,
+  applyBranchFilter,
+  branchIdForWrite,
+} from "@/lib/branch";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-async function getTenantFromRequest(request: Request): Promise<string | null> {
-  const authHeader = request.headers.get("authorization");
-  const token = authHeader?.replace("Bearer ", "");
-  if (!token) return null;
-
-  const { data: { user } } = await supabase.auth.getUser(token);
-  if (!user) return null;
-
-  const { data: membership } = await supabase
-    .from("nexora_memberships")
-    .select("org_id")
-    .eq("user_id", user.id)
-    .single();
-
-  return membership?.org_id || null;
-}
 
 export async function GET(request: Request) {
   try {
@@ -36,6 +25,8 @@ export async function GET(request: Request) {
     const limit = parseInt(searchParams.get("limit") || "10");
     const offset = (page - 1) * limit;
 
+    const branchCtx = await requestBranchContext(request, tenantId);
+
     let query = supabase
       .from("cf_events")
       .select("*", { count: "exact" })
@@ -44,6 +35,8 @@ export async function GET(request: Request) {
     if (upcoming) {
       query = query.gte("start_date", new Date().toISOString());
     }
+
+    query = applyBranchFilter(query, branchCtx);
 
     const { data: events, count, error } = await query
       .order("start_date", { ascending: true })
@@ -85,10 +78,13 @@ export async function POST(request: Request) {
       );
     }
 
+    const branchCtx = await requestBranchContext(request, tenantId);
+
     const { data: event, error } = await supabase
       .from("cf_events")
       .insert({
         tenant_id: tenantId,
+        branch_id: branchIdForWrite(branchCtx, body.branch_id),
         title,
         description,
         location,

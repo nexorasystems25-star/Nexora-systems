@@ -1,71 +1,170 @@
+"use client";
+import { useState, useEffect } from "react";
+
+interface Event {
+  id: string;
+  title: string;
+  description: string;
+  location: string;
+  start_date: string;
+  end_date: string;
+  max_attendees: number;
+}
+
+interface EventsResponse {
+  events: Event[];
+  pagination: { page: number; limit: number; total: number; pages: number };
+}
+
 export default function EventsPage() {
-  const events = [
-    { id: "1", title: "Sunday Service", date: "2026-08-10", time: "09:00 AM", location: "Main Sanctuary", attendees: 180, status: "Upcoming" },
-    { id: "2", title: "Bible Study", date: "2026-08-07", time: "06:30 PM", location: "Fellowship Hall", attendees: 45, status: "Upcoming" },
-    { id: "3", title: "Youth Conference", date: "2026-08-15", time: "10:00 AM", location: "Youth Center", attendees: 120, status: "Upcoming" },
-    { id: "4", title: "Choir Practice", date: "2026-08-08", time: "05:00 PM", location: "Music Room", attendees: 25, status: "Upcoming" },
-    { id: "5", title: "Prayer Meeting", date: "2026-08-06", time: "06:00 AM", location: "Prayer Room", attendees: 30, status: "Today" },
-  ];
+  const [data, setData] = useState<EventsResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const res = await fetch("/api/events?upcoming=true&limit=20");
+        if (!res.ok) throw new Error("Failed to fetch events");
+        const json = await res.json();
+        setData(json);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "An error occurred");
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchData();
+  }, []);
+
+  const events = data?.events || [];
+  const totalEvents = data?.pagination.total ?? 0;
+
+  const getEventStatus = (startDate: string) => {
+    const now = new Date();
+    const eventDate = new Date(startDate);
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const eventDay = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
+    if (eventDay.getTime() === today.getTime()) return "Today";
+    if (eventDay > today) return "Upcoming";
+    return "Past";
+  };
+
+  const formatDateTime = (dateStr: string) => {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  };
+
+  const formatTime = (dateStr: string) => {
+    const d = new Date(dateStr);
+    return d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+  };
+
+  if (loading) {
+    return (
+      <div>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "var(--space-xl)" }}>
+          <div>
+            <h1 style={{ marginBottom: "var(--space-xs)" }}>Events</h1>
+            <p style={{ color: "var(--muted)", fontSize: "var(--text-lg)" }}>Loading...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "var(--space-xl)" }}>
+          <div>
+            <h1 style={{ marginBottom: "var(--space-xs)" }}>Events</h1>
+          </div>
+        </div>
+        <div className="card card-padding" style={{ color: "var(--error)" }}>{error}</div>
+      </div>
+    );
+  }
 
   return (
     <div>
-      <div className="sm:flex sm:items-center sm:justify-between">
+      {/* Page heading */}
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "var(--space-xl)" }}>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Events</h1>
-          <p className="mt-2 text-sm text-gray-700">
+          <h1 style={{ marginBottom: "var(--space-xs)" }}>Events</h1>
+          <p style={{ color: "var(--muted)", fontSize: "var(--text-lg)" }}>
             Schedule services, conferences, and activities. Track attendance and manage volunteers.
           </p>
         </div>
-        <div className="mt-4 sm:mt-0">
-          <button className="inline-flex items-center justify-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500">
-            + Create Event
-          </button>
+        <button className="btn btn-primary">+ Create Event</button>
+      </div>
+
+      {/* Stats */}
+      <div className="kpi-grid" style={{ marginBottom: "var(--space-xl)" }}>
+        <div className="card">
+          <p style={{ fontSize: "var(--text-sm)", color: "var(--muted)" }}>Total Events</p>
+          <p style={{ fontSize: "var(--text-4xl)", fontWeight: 700, marginTop: "var(--space-xs)" }}>{totalEvents}</p>
+        </div>
+        <div className="card">
+          <p style={{ fontSize: "var(--text-sm)", color: "var(--muted)" }}>This Month</p>
+          <p style={{ fontSize: "var(--text-4xl)", fontWeight: 700, marginTop: "var(--space-xs)" }}>
+            {events.filter((e) => {
+              const d = new Date(e.start_date);
+              const now = new Date();
+              return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+            }).length}
+          </p>
+        </div>
+        <div className="card">
+          <p style={{ fontSize: "var(--text-sm)", color: "var(--muted)" }}>Upcoming</p>
+          <p style={{ fontSize: "var(--text-4xl)", fontWeight: 700, marginTop: "var(--space-xs)" }}>
+            {events.filter((e) => getEventStatus(e.start_date) !== "Past").length}
+          </p>
+        </div>
+        <div className="card">
+          <p style={{ fontSize: "var(--text-sm)", color: "var(--muted)" }}>Total Capacity</p>
+          <p style={{ fontSize: "var(--text-4xl)", fontWeight: 700, marginTop: "var(--space-xs)" }}>
+            {events.reduce((sum, e) => sum + (e.max_attendees || 0), 0)}
+          </p>
         </div>
       </div>
 
-      <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="overflow-hidden rounded-lg bg-white px-4 py-5 shadow sm:p-6">
-          <dt className="truncate text-sm font-medium text-gray-500">This Week</dt>
-          <dd className="mt-1 text-3xl font-semibold tracking-tight text-gray-900">5</dd>
-        </div>
-        <div className="overflow-hidden rounded-lg bg-white px-4 py-5 shadow sm:p-6">
-          <dt className="truncate text-sm font-medium text-gray-500">This Month</dt>
-          <dd className="mt-1 text-3xl font-semibold tracking-tight text-gray-900">12</dd>
-        </div>
-        <div className="overflow-hidden rounded-lg bg-white px-4 py-5 shadow sm:p-6">
-          <dt className="truncate text-sm font-medium text-gray-500">Total Attendees</dt>
-          <dd className="mt-1 text-3xl font-semibold tracking-tight text-gray-900">400</dd>
-        </div>
-        <div className="overflow-hidden rounded-lg bg-white px-4 py-5 shadow sm:p-6">
-          <dt className="truncate text-sm font-medium text-gray-500">Volunteers</dt>
-          <dd className="mt-1 text-3xl font-semibold tracking-tight text-gray-900">18</dd>
-        </div>
+      {/* Upcoming Events */}
+      <div className="section-header">
+        <h2 className="section-title">Upcoming Events</h2>
       </div>
-
-      <div className="mt-8">
-        <h2 className="text-lg font-medium text-gray-900">Upcoming Events</h2>
-        <div className="mt-4 space-y-4">
-          {events.map((event) => (
-            <div key={event.id} className="overflow-hidden rounded-lg bg-white shadow">
-              <div className="px-4 py-5 sm:p-6">
-                <div className="flex items-center justify-between">
+      {events.length === 0 ? (
+        <div className="card card-padding" style={{ textAlign: "center", color: "var(--muted)" }}>
+          No upcoming events
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-md)" }}>
+          {events.map((event) => {
+            const status = getEventStatus(event.start_date);
+            return (
+              <div key={event.id} className="card" style={{ padding: "var(--space-lg)" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                   <div>
-                    <h3 className="text-lg font-medium text-gray-900">{event.title}</h3>
-                    <p className="mt-1 text-sm text-gray-500">{event.date} at {event.time}</p>
-                    <p className="mt-1 text-sm text-gray-500">{event.location}</p>
+                    <h3 style={{ fontSize: "var(--text-xl)", fontWeight: 600, marginBottom: "var(--space-xs)" }}>{event.title}</h3>
+                    <p style={{ fontSize: "var(--text-sm)", color: "var(--muted)" }}>
+                      {formatDateTime(event.start_date)} at {formatTime(event.start_date)}
+                    </p>
+                    <p style={{ fontSize: "var(--text-sm)", color: "var(--muted)" }}>{event.location || "No location set"}</p>
                   </div>
-                  <div className="text-right">
-                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${event.status === "Today" ? "bg-yellow-100 text-yellow-800" : "bg-blue-100 text-blue-800"}`}>
-                      {event.status}
+                  <div style={{ textAlign: "right" }}>
+                    <span className={`badge ${status === "Today" ? "badge-warning" : "badge-primary"}`}>
+                      {status}
                     </span>
-                    <p className="mt-2 text-sm text-gray-500">{event.attendees} expected</p>
+                    <p style={{ fontSize: "var(--text-sm)", color: "var(--muted)", marginTop: "var(--space-sm)" }}>
+                      {event.max_attendees ? `${event.max_attendees} capacity` : "No limit set"}
+                    </p>
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
-      </div>
+      )}
     </div>
   );
 }

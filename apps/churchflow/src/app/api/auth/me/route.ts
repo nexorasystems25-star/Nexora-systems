@@ -27,18 +27,33 @@ export async function GET(request: Request) {
       );
     }
 
-    const { data: membership, error: membershipError } = await supabase
-      .from("nexora_memberships")
-      .select("*, nexora_organizations(*)")
-      .eq("user_id", user.id)
-      .single();
+    const { data: memberships, error: membershipError } = await supabase
+      .from("memberships")
+      .select("*, organizations(*)")
+      .eq("user_id", user.id);
 
-    if (membershipError || !membership) {
+    if (membershipError || !memberships || memberships.length === 0) {
       return NextResponse.json(
         { error: "No organization membership found" },
         { status: 403 }
       );
     }
+
+    // A user may have several memberships (org-wide + per-branch). Resolve the
+    // one for the requested tenant, or fall back to the first.
+    const { searchParams } = new URL(request.url);
+    const requestedOrg = searchParams.get("org_id");
+    const membership =
+      (requestedOrg && memberships.find((m) => m.org_id === requestedOrg)) ||
+      memberships[0];
+
+    const tenantMemberships = memberships.filter(
+      (m) => m.org_id === membership.org_id
+    );
+    const allowedBranchIds = tenantMemberships
+      .map((m) => m.branch_id)
+      .filter((b): b is string => !!b);
+    const isOrgWide = tenantMemberships.some((m) => m.branch_id === null);
 
     return NextResponse.json({
       user: {
@@ -48,10 +63,11 @@ export async function GET(request: Request) {
       },
       tenant: {
         id: membership.org_id,
-        name: membership.nexora_organizations?.name,
-        slug: membership.nexora_organizations?.slug,
+        name: membership.organizations?.name,
+        slug: membership.organizations?.slug,
       },
       role: membership.role,
+      branchScope: { isOrgWide, allowedBranchIds },
     });
   } catch (error) {
     console.error("Auth check error:", error);

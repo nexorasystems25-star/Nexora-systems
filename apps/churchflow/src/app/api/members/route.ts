@@ -1,27 +1,11 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { getTenantFromRequest } from "@/lib/tenant";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-async function getTenantFromRequest(request: Request): Promise<string | null> {
-  const authHeader = request.headers.get("authorization");
-  const token = authHeader?.replace("Bearer ", "");
-  if (!token) return null;
-
-  const { data: { user } } = await supabase.auth.getUser(token);
-  if (!user) return null;
-
-  const { data: membership } = await supabase
-    .from("nexora_memberships")
-    .select("org_id")
-    .eq("user_id", user.id)
-    .single();
-
-  return membership?.org_id || null;
-}
 
 export async function GET(request: Request) {
   try {
@@ -48,7 +32,7 @@ export async function GET(request: Request) {
     }
 
     if (group) {
-      query = query.eq("group_id", group);
+      query = query.eq("group_name", group);
     }
 
     if (status) {
@@ -103,7 +87,7 @@ export async function POST(request: Request) {
         last_name,
         email,
         phone,
-        group_id,
+        group_name: group_id,
         status: status || "active",
       })
       .select()

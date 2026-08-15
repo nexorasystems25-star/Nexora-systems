@@ -1,94 +1,243 @@
+"use client";
+import { useState, useEffect } from "react";
+
+interface Member {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone: string;
+  group_id: string;
+  status: string;
+}
+
+interface MembersResponse {
+  members: Member[];
+  pagination: { page: number; limit: number; total: number; pages: number };
+}
+
 export default function MembersPage() {
-  const members = [
-    { id: "1", name: "John Doe", email: "john@example.com", phone: "+233 24 123 4567", group: "Young Adults", status: "Active", initials: "JD", color: "bg-blue-600" },
-    { id: "2", name: "Jane Smith", email: "jane@example.com", phone: "+233 20 987 6543", group: "Choir", status: "Active", initials: "JS", color: "bg-purple-600" },
-    { id: "3", name: "Kwame Mensah", email: "kwame@example.com", phone: "+233 27 456 7890", group: "Prayer Warriors", status: "Active", initials: "KM", color: "bg-green-600" },
-    { id: "4", name: "Ama Asante", email: "ama@example.com", phone: "+233 55 321 6540", group: "Women's Fellowship", status: "New", initials: "AA", color: "bg-pink-600" },
-    { id: "5", name: "Kofi Darko", email: "kofi@example.com", phone: "+233 24 111 2222", group: "Young Adults", status: "Inactive", initials: "KD", color: "bg-orange-600" },
-  ];
+  const [data, setData] = useState<MembersResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [groupFilter, setGroupFilter] = useState("");
+  const [page, setPage] = useState(1);
+
+  useEffect(() => {
+    async function fetchData() {
+      setLoading(true);
+      try {
+        const params = new URLSearchParams({ page: String(page), limit: "20" });
+        if (search) params.set("search", search);
+        if (statusFilter) params.set("status", statusFilter);
+        if (groupFilter) params.set("group", groupFilter);
+        const res = await fetch(`/api/members?${params.toString()}`);
+        if (!res.ok) throw new Error("Failed to fetch members");
+        const json = await res.json();
+        setData(json);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "An error occurred");
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchData();
+  }, [page, search, statusFilter, groupFilter]);
+
+  const getInitials = (m: Member) =>
+    `${(m.first_name || "").charAt(0)}${(m.last_name || "").charAt(0)}`.toUpperCase();
+
+  const members = data?.members || [];
+  const activeCount = members.filter((m) => m.status === "active").length;
+  const newCount = members.filter((m) => m.status === "new").length;
 
   return (
     <div>
-      <div className="sm:flex sm:items-center sm:justify-between">
+      {/* Page heading */}
+      <div className="page-header">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Members</h1>
-          <p className="mt-2 text-sm text-gray-700">
-            Manage your church members, their information, and group assignments.
-          </p>
+          <p className="page-eyebrow">PEOPLE DIRECTORY</p>
+          <h1 style={{ marginBottom: "var(--space-xs)" }}>Members</h1>
+          <p className="page-description">Manage your church members, their information, and group assignments.</p>
         </div>
-        <div className="mt-4 sm:mt-0">
-          <button className="inline-flex items-center justify-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500">
-            + Add Member
-          </button>
+        <button className="btn btn-primary">+ Add Member</button>
+      </div>
+
+      {/* Stats grid */}
+      <div className="kpi-grid" style={{ marginBottom: "var(--space-lg)" }}>
+        <div className="card stat-card">
+          <div className="stat-card-icon" style={{ background: "var(--blue-pale)" }}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--blue)" strokeWidth="2">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+              <circle cx="9" cy="7" r="4" />
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+              <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+            </svg>
+          </div>
+          <div>
+            <p className="stat-card-label">Total Members</p>
+            <p className="stat-card-value">{data?.pagination.total ?? 0}</p>
+          </div>
+        </div>
+        <div className="card stat-card">
+          <div className="stat-card-icon" style={{ background: "var(--success-pale)" }}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--success)" strokeWidth="2">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+              <polyline points="22 4 12 14.01 9 11.01" />
+            </svg>
+          </div>
+          <div>
+            <p className="stat-card-label">Active</p>
+            <p className="stat-card-value">{activeCount}</p>
+          </div>
+        </div>
+        <div className="card stat-card">
+          <div className="stat-card-icon" style={{ background: "var(--warning-pale)" }}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--warning)" strokeWidth="2">
+              <circle cx="12" cy="12" r="10" />
+              <polyline points="12 6 12 12 16 14" />
+            </svg>
+          </div>
+          <div>
+            <p className="stat-card-label">New Members</p>
+            <p className="stat-card-value">{newCount}</p>
+          </div>
         </div>
       </div>
 
-      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <input type="text" placeholder="Search members..." className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6" />
-        <select className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6">
-          <option>All Groups</option>
-          <option>Young Adults</option>
-          <option>Choir</option>
-          <option>Prayer Warriors</option>
-        </select>
-        <select className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6">
-          <option>All Status</option>
-          <option>Active</option>
-          <option>Inactive</option>
-          <option>New</option>
-        </select>
-      </div>
+      {/* Members table */}
+      <div className="card card-table">
+        <div className="table-toolbar">
+          <div className="input-search-wrap">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="11" cy="11" r="8" />
+              <path d="m21 21-4.3-4.3" />
+            </svg>
+            <input
+              className="input"
+              type="text"
+              placeholder="Search members..."
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+            />
+          </div>
+          <select
+            className="input input-auto"
+            value={groupFilter}
+            onChange={(e) => { setGroupFilter(e.target.value); setPage(1); }}
+          >
+            <option value="">All Groups</option>
+            <option value="young-adults">Young Adults</option>
+            <option value="choir">Choir</option>
+            <option value="prayer-warriors">Prayer Warriors</option>
+          </select>
+          <select
+            className="input input-auto"
+            style={{ minWidth: "130px" }}
+            value={statusFilter}
+            onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
+          >
+            <option value="">All Status</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+            <option value="new">New</option>
+          </select>
+        </div>
 
-      <div className="mt-6 overflow-hidden rounded-lg bg-white shadow">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Group</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-              <th className="relative px-6 py-3"><span className="sr-only">Actions</span></th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {members.map((member) => (
-              <tr key={member.id}>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center">
-                    <div className={`h-10 w-10 flex-shrink-0 inline-flex items-center justify-center rounded-full ${member.color}`}>
-                      <span className="text-sm font-medium text-white">{member.initials}</span>
-                    </div>
-                    <div className="ml-4">
-                      <div className="text-sm font-medium text-gray-900">{member.name}</div>
-                    </div>
+        {loading ? (
+          <div style={{ padding: "var(--space-xl)" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-md)" }}>
+              {[1, 2, 3, 4, 5].map((i) => (
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: "var(--space-md)" }}>
+                  <div className="skeleton skeleton-avatar" />
+                  <div style={{ flex: 1 }}>
+                    <div className="skeleton skeleton-text" style={{ width: "140px", marginBottom: "var(--space-xs)" }} />
+                    <div className="skeleton skeleton-text" style={{ width: "200px" }} />
                   </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{member.email}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{member.phone}</td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">{member.group}</span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${member.status === "Active" ? "bg-green-100 text-green-800" : member.status === "New" ? "bg-yellow-100 text-yellow-800" : "bg-gray-100 text-gray-800"}`}>
-                    {member.status}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  <button className="text-blue-600 hover:text-blue-900">Edit</button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+                  <div className="skeleton skeleton-text" style={{ width: "80px" }} />
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : error ? (
+          <div style={{ padding: "var(--space-xl)", textAlign: "center", color: "var(--error)" }}>{error}</div>
+        ) : members.length === 0 ? (
+          /* Empty State */
+          <div className="empty-state">
+            <div className="empty-state-icon" style={{ color: "var(--muted)", opacity: 0.4 }}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+              </svg>
+            </div>
+            <h3 className="empty-state-title">No members yet</h3>
+            <p className="empty-state-text">
+              Add your first church member to get started. You can import from a spreadsheet or add them one by one.
+            </p>
+            <button className="btn btn-primary">+ Add Member</button>
+          </div>
+        ) : (
+          <>
+            <div style={{ overflowX: "auto" }}>
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th scope="col">Name</th>
+                    <th scope="col">Email</th>
+                    <th scope="col">Phone</th>
+                    <th scope="col">Group</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">
+                      <span className="sr-only">Actions</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {members.map((member) => (
+                    <tr key={member.id} className="table-row">
+                      <td>
+                        <div className="cell-with-avatar">
+                          <div className="avatar">{getInitials(member)}</div>
+                          <span className="cell-bold">{member.first_name} {member.last_name}</span>
+                        </div>
+                      </td>
+                      <td className="cell-muted">{member.email || "—"}</td>
+                      <td className="cell-muted">{member.phone || "—"}</td>
+                      <td>
+                        <span className="badge badge-default">{member.group_id || "Unassigned"}</span>
+                      </td>
+                      <td>
+                        <span className={`badge ${member.status === "active" ? "badge-success" : member.status === "new" ? "badge-primary" : "badge-warning"}`}>
+                          {member.status}
+                        </span>
+                      </td>
+                      <td>
+                        <button className="btn btn-ghost btn-sm btn-icon-only" aria-label={`Actions for ${member.first_name}`}>
+                          ⋮
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
-      <div className="mt-4 flex items-center justify-between">
-        <p className="text-sm text-gray-700">Showing <span className="font-medium">1</span> to <span className="font-medium">5</span> of <span className="font-medium">245</span> results</p>
-        <div className="flex gap-2">
-          <button className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50">Previous</button>
-          <button className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50">Next</button>
-        </div>
+            <div className="table-footer">
+              <span className="table-footer-text">
+                Showing {members.length > 0 ? (page - 1) * 20 + 1 : 0} to {Math.min(page * 20, data?.pagination.total ?? 0)} of {data?.pagination.total ?? 0} results
+              </span>
+              <div className="pagination">
+                <button className="btn btn-secondary btn-sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>←</button>
+                <button className="btn btn-primary btn-sm">{page}</button>
+                <button className="btn btn-secondary btn-sm" disabled={page >= (data?.pagination.pages ?? 1)} onClick={() => setPage((p) => p + 1)}>→</button>
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

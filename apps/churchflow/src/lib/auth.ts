@@ -8,6 +8,9 @@ export interface TenantContext {
   email: string;
   role: "platform_owner" | "nexora_staff" | "admin" | "manager" | "leader" | "member" | "viewonly";
   isSuperAdmin: boolean;
+  actorScope: "platform" | "product" | "tenant";
+  productId?: string;
+  productRoles: string[];
   productAccess: string[];
 }
 
@@ -38,13 +41,20 @@ export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 export async function verifyToken(token: string): Promise<TenantContext | null> {
   try {
     const { payload } = await jwtVerify(token, jwtSecret);
+    const orgId =
+      (payload.organizationId as string) ||
+      (payload.orgId as string) ||
+      (payload.tenantId as string);
     return {
-      tenantId: payload.tenantId as string,
-      orgId: payload.orgId as string,
+      tenantId: orgId,
+      orgId,
       userId: payload.sub as string,
       email: payload.email as string,
       role: payload.role as TenantContext["role"],
       isSuperAdmin: payload.isSuperAdmin as boolean,
+      actorScope: (payload.actorScope as TenantContext["actorScope"]) ?? "tenant",
+      productId: (payload.productId as string) ?? undefined,
+      productRoles: (payload.productRoles as string[]) ?? [],
       productAccess: payload.productAccess as string[],
     };
   } catch {

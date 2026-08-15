@@ -81,7 +81,45 @@ ALTER TABLE public.audit_events
     ADD COLUMN IF NOT EXISTS impersonated_by UUID REFERENCES public.identities(id);
 CREATE INDEX IF NOT EXISTS idx_audit_events_product ON public.audit_events(product_id);
 
--- 7. RLS helper: is the current Supabase auth user a product super-admin? ---
+-- 7. RLS helper stubs. The application layer (auth-token JWT + service-role
+--    connection, which bypasses RLS) is the authoritative access enforcement.
+--    This schema has no Supabase auth.uid() -> identities linkage, so "current
+--    identity" cannot be resolved inside SQL. These helpers therefore default
+--    to deny for direct/anon Supabase access (defense-in-depth), which is safe
+--    because every app query runs as the admin/service role that bypasses RLS.
+CREATE OR REPLACE FUNCTION public.current_identity_id()
+RETURNS UUID
+LANGUAGE SQL
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+    SELECT NULL::UUID
+$$;
+
+CREATE OR REPLACE FUNCTION public.is_platform_user()
+RETURNS BOOLEAN
+LANGUAGE SQL
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+    SELECT false
+$$;
+
+CREATE OR REPLACE FUNCTION public.has_org_access(target_org UUID)
+RETURNS BOOLEAN
+LANGUAGE SQL
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+    SELECT false
+$$;
+
+-- Is the current identity a product super-admin for target_product?
+-- Resolves the current identity via the deny-by-default helper above, since
+-- there is no Supabase auth linkage in this schema.
 CREATE OR REPLACE FUNCTION public.is_product_superadmin(target_product UUID)
 RETURNS BOOLEAN
 LANGUAGE SQL
@@ -91,8 +129,7 @@ SET search_path = ''
 AS $$
     SELECT EXISTS (
         SELECT 1 FROM public.product_memberships pm
-        JOIN public.identities i ON i.id = pm.identity_id
-        WHERE i.auth_user_id = auth.uid()
+        WHERE pm.identity_id = public.current_identity_id()
           AND pm.product_id = target_product
           AND pm.status = 'active'
           AND pm.role IN ('product_owner', 'product_admin')

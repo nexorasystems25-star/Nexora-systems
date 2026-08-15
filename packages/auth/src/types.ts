@@ -30,9 +30,13 @@ export interface TenantContext {
 
 export interface JwtPayload {
   sub: string;
+  userId: string;
   email: string;
   role: string;
   is_super_admin: boolean;
+  actorScope: "platform" | "product" | "tenant";
+  productId?: string;
+  productRoles?: string[];
   tenant_id?: string;
   product_id?: string;
   permissions: string[];

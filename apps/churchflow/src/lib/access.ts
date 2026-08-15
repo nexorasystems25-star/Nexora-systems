@@ -45,3 +45,39 @@ export function requireScope(
   }
   return null;
 }
+
+/**
+ * Platform-owner-only gate. Unlike requireScope, this is gated on the explicit
+ * `platform_owner` ROLE, never on `isSuperAdmin` — because `isSuperAdmin` is
+ * true for every platform role (incl. nexora_staff) and cannot distinguish an
+ * owner from support staff.
+ */
+export function requirePlatformOwner(
+  ctx: AccessContext | null
+): NextResponse | null {
+  if (!ctx) {
+    return NextResponse.json({ error: "Unauthenticated" }, { status: 401 });
+  }
+  if (ctx.role !== "platform_owner") {
+    return NextResponse.json({ error: "Platform owner access required" }, { status: 403 });
+  }
+  return null;
+}
+
+/**
+ * Enforces that a product-scoped caller only touches rows belonging to their own
+ * product. Platform callers (actorScope "platform") are exempt. Guards against
+ * cross-product IDOR on product-scoped mutations.
+ */
+export function assertWithinProduct(
+  ctx: AccessContext | null,
+  membershipProductId: string
+): NextResponse | null {
+  if (!ctx) {
+    return NextResponse.json({ error: "Unauthenticated" }, { status: 401 });
+  }
+  if (ctx.actorScope === "product" && ctx.productId !== membershipProductId) {
+    return NextResponse.json({ error: "Product mismatch" }, { status: 403 });
+  }
+  return null;
+}
